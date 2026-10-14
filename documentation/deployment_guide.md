@@ -134,7 +134,6 @@ helmfile -f helmfile/helmfile.yaml destroy
 
 aws rds delete-db-instance --db-instance-identifier healthchecks-db \
   --skip-final-snapshot --delete-automated-backups
-aws rds wait db-instance-deleted --db-instance-identifier healthchecks-db
 aws rds delete-db-subnet-group --db-subnet-group-name healthchecks-db
 aws ec2 delete-security-group --group-id <rds-security-group-id>
 

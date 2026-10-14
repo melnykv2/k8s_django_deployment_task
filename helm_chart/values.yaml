@@ -1,0 +1,45 @@
+config:
+  DB: "postgres"
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_NAME: "hc"
+  DB_USER: "hc"
+  DEBUG: "False"
+  SITE_ROOT: "https://healthchecks.local"
+  ALLOWED_HOSTS: "healthchecks.local,localhost"
+  SITE_NAME: "Healthchecks K8s"
+
+# Real values are passed in secrets-values.yaml
+secrets: {}
+
+replicaCount: 2
+image:
+  repository: melnykv2/healthchecks
+  tag: v1.5
+containerPort: 8080
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+service:
+  type: ClusterIP
+  port: 80
+
+
+ingress:
+  className: nginx
+  host: healthchecks.local
+  clusterIssuer: selfsigned
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+letsencrypt:
+  email: "melnykv123@gmail.com"

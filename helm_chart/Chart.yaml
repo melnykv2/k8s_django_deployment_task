@@ -1,0 +1,12 @@
+apiVersion: v2
+name: django-app
+description: Helm chart for deploying a Django application to Kubernetes (AWS EKS)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - django
+  - python
+  - web
+maintainers:
+  - name: Vadym Melnyk

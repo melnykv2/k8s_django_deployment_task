@@ -39,7 +39,5 @@ releases:
     needs:
       - cert-manager/cert-manager
       - ingress-nginx/ingress-nginx
-    values:
-      - values/healthchecks-aws.yaml
     secrets:
       - ../helm_chart/secrets-values.yaml

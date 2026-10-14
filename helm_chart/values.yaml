@@ -4,10 +4,10 @@ config:
   DB_PORT: "5432"
   DB_NAME: "hc"
   DB_USER: "hc"
+  DB_SSLMODE: "require"
   DEBUG: "False"
-  SITE_ROOT: "https://healthchecks.local"
-  ALLOWED_HOSTS: "healthchecks.local,localhost"
-  SITE_NAME: "Healthchecks K8s"
+  SITE_ROOT: "https://hc.vadymthebest.com"
+  ALLOWED_HOSTS: "hc.vadymthebest.com,localhost"
 
 # Real values are passed in secrets-values.yaml
 secrets: {}
@@ -15,7 +15,7 @@ secrets: {}
 replicaCount: 2
 image:
   repository: melnykv2/healthchecks
-  tag: v1.5
+  tag: v1.4
 containerPort: 8080
 resources:
   requests:
@@ -32,8 +32,8 @@ service:
 
 ingress:
   className: nginx
-  host: healthchecks.local
-  clusterIssuer: selfsigned
+  host: hc.vadymthebest.com
+  clusterIssuer: letsencrypt-prod
 
 autoscaling:
   minReplicas: 2

@@ -17,14 +17,7 @@ helm plugin install --keyring $K https://github.com/jkroepke/helm-secrets/releas
 helmfile init
 ```
 
-## 2. Set the AWS region
-
-```bash
-export AWS_REGION=us-east-1 AWS_DEFAULT_REGION=us-east-1
-aws configure list | grep region
-```
-
-## 3. Prepare the secrets
+## 2. Prepare the secrets
 
 ```bash
 mkdir -p ~/.config/sops/age
@@ -90,7 +83,6 @@ aws rds create-db-instance --db-instance-identifier healthchecks-db \
   --db-subnet-group-name healthchecks-db --vpc-security-group-ids $SG \
   --no-publicly-accessible --no-multi-az --backup-retention-period 0 --no-deletion-protection
 
-aws rds wait db-instance-available --db-instance-identifier healthchecks-db
 aws rds describe-db-instances --db-instance-identifier healthchecks-db \
   --query 'DBInstances[0].Endpoint.Address' --output text
 ```
@@ -149,5 +141,3 @@ aws ec2 delete-security-group --group-id <rds-security-group-id>
 
 eksctl delete cluster -f infra/eks-cluster.yaml --wait
 ```
-
-Remove the `hc` CNAME record at your DNS provider.

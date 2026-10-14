@@ -29,8 +29,8 @@ Deploys the **Healthchecks** Django application (`melnykv2/healthchecks`) to **A
 eksctl create cluster -f infra/eks-cluster.yaml
 # create RDS in the cluster VPC and set config.DB_HOST in helm_chart/values.yaml
 
-helmfile -f helmfile/helmfile.yaml sync                   # first install
-helmfile -f helmfile/helmfile.yaml apply                  # every later change
+helmfile -f helmfile/helmfile.yaml sync                   # first install  
+helmfile -f helmfile/helmfile.yaml apply                  # every later change  
 
 Before deploying in your own account, replace the environment-specific values.** These include `config.DB_HOST` (RDS endpoint), the domain (`ingress.host`, `SITE_ROOT`, `ALLOWED_HOSTS`), `letsencrypt.email`, the age public key in `.sops.yaml`, and your own encrypted `secrets-values.yaml`. The full list is in **[guide §13](documentation/deployment_guide.md#13-values-to-replace-for-your-own-deployment).
 

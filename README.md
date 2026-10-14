@@ -23,9 +23,6 @@ Deploys the **Healthchecks** Django application (`melnykv2/healthchecks`) to **A
 └── documentation/deployment_guide.md
 ```
 
-## Quick start
-
-eksctl create cluster -f infra/eks-cluster.yaml
 # create RDS in the cluster VPC and set config.DB_HOST in helm_chart/values.yaml
 
 helmfile -f helmfile/helmfile.yaml sync                   # first install  

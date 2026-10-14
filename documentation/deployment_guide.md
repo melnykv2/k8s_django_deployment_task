@@ -37,7 +37,7 @@ YAML
 sops -e -i helm_chart/secrets-values.yaml
 ```
 
-## 4. Set the domain and email
+## 3. Set the domain and email
 
 In `helm_chart/values.yaml`:
 
@@ -51,14 +51,14 @@ letsencrypt:
   email: "<your-email>"
 ```
 
-## 5. Create the EKS cluster
+## 4. Create the EKS cluster
 
 ```bash
 eksctl create cluster -f infra/eks-cluster.yaml
 kubectl get nodes
 ```
 
-## 6. Create the RDS database
+## 5. Create the RDS database
 
 ```bash
 VPC=$(aws ec2 describe-vpcs --filters Name=tag:alpha.eksctl.io/cluster-name,Values=healthchecks \
@@ -94,7 +94,7 @@ config:
   DB_HOST: "<rds-endpoint>"
 ```
 
-## 7. Deploy
+## 6. Deploy
 
 ```bash
 kubectl config current-context
@@ -108,7 +108,7 @@ helmfile -f helmfile/helmfile.yaml diff
 helmfile -f helmfile/helmfile.yaml apply
 ```
 
-## 8. Point DNS at the load balancer
+## 7. Point DNS at the load balancer
 
 ```bash
 kubectl get svc -n ingress-nginx ingress-nginx-controller
@@ -120,7 +120,7 @@ At your DNS provider, add a CNAME record:
 |---|---|---|
 | CNAME | `hc` | `<EXTERNAL-IP value>.elb.us-east-1.amazonaws.com` |
 
-## 9. Verify
+## 8. Verify
 
 ```bash
 kubectl get certificate healthchecks-tls        # READY True
@@ -128,7 +128,7 @@ kubectl get pods,svc,ingress,hpa
 curl https://hc.<your-domain>/api/v3/status/    # OK
 ```
 
-## 10. Tear down
+## 9. Clean up
 
 ```bash
 helmfile -f helmfile/helmfile.yaml destroy

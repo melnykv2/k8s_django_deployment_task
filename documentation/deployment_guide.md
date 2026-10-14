@@ -124,7 +124,6 @@ At your DNS provider, add a CNAME record:
 
 ```bash
 kubectl get certificate healthchecks-tls        # READY True
-kubectl get pods,svc,ingress,hpa
 curl https://hc.<your-domain>/api/v3/status/    # OK
 ```
 

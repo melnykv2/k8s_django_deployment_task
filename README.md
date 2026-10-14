@@ -23,10 +23,7 @@ Deploys the **Healthchecks** Django application (`melnykv2/healthchecks`) to **A
 └── documentation/deployment_guide.md
 ```
 
-# create RDS in the cluster VPC and set config.DB_HOST in helm_chart/values.yaml
-
-helmfile -f helmfile/helmfile.yaml sync                   # first install  
-helmfile -f helmfile/helmfile.yaml apply                  # every later change  
+## Before deploying
 
 Before deploying in your own account, replace the environment-specific values. These include `config.DB_HOST` (RDS endpoint), the domain (`ingress.host`, `SITE_ROOT`, `ALLOWED_HOSTS`), `letsencrypt.email`, the age public key in `.sops.yaml`, and your own encrypted `secrets-values.yaml`. See the [deployment guide](documentation/deployment_guide.md).
 

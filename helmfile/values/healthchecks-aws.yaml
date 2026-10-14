@@ -1,0 +1,13 @@
+image:
+  tag: v1.4
+
+ingress:
+  className: nginx
+  host: hc.vadymthebest.com
+  clusterIssuer: letsencrypt-prod
+
+config:
+  DB_HOST: ""
+  DB_SSLMODE: "require"
+  SITE_ROOT: "https://hc.vadymthebest.com"
+  ALLOWED_HOSTS: "hc.vadymthebest.com,localhost"

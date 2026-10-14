@@ -19,7 +19,6 @@ Deploys the **Healthchecks** Django application (`melnykv2/healthchecks`) to **A
 │       └── hpa.yaml               # 2–4 replicas at 80% CPU / memory
 ├── helmfile/helmfile.yaml         # Whole environment: ingress-nginx, cert-manager, app
 ├── infra/eks-cluster.yaml         # eksctl cluster definition
-├── local/                         # Minikube-only helpers (in-cluster Postgres, self-signed issuer)
 ├── .sops.yaml                     # sops rule: which file is encrypted, with which age key
 └── documentation/deployment_guide.md
 ```
@@ -32,6 +31,6 @@ eksctl create cluster -f infra/eks-cluster.yaml
 helmfile -f helmfile/helmfile.yaml sync                   # first install  
 helmfile -f helmfile/helmfile.yaml apply                  # every later change  
 
-Before deploying in your own account, replace the environment-specific values.** These include `config.DB_HOST` (RDS endpoint), the domain (`ingress.host`, `SITE_ROOT`, `ALLOWED_HOSTS`), `letsencrypt.email`, the age public key in `.sops.yaml`, and your own encrypted `secrets-values.yaml`. The full list is in **[guide §13](documentation/deployment_guide.md#13-values-to-replace-for-your-own-deployment).
+Before deploying in your own account, replace the environment-specific values. These include `config.DB_HOST` (RDS endpoint), the domain (`ingress.host`, `SITE_ROOT`, `ALLOWED_HOSTS`), `letsencrypt.email`, the age public key in `.sops.yaml`, and your own encrypted `secrets-values.yaml`. The full list is in **[guide §6](documentation/deployment_guide.md#6-configuration-values-to-set-before-deploying)**.
 
-See [documentation/deployment_guide.md](documentation/deployment_guide.md) for every step, the issues faced and their solutions, and why Kubernetes and Helm fit this scenario.
+See [documentation/deployment_guide.md](documentation/deployment_guide.md) for every step, the issues faced and their solutions.

@@ -27,8 +27,6 @@ Deploys the **Healthchecks** Django application (`melnykv2/healthchecks`) to **A
 
 Before deploying in your own account, replace the environment-specific values. These include `config.DB_HOST` (RDS endpoint), the domain (`ingress.host`, `SITE_ROOT`, `ALLOWED_HOSTS`), `letsencrypt.email`, the age public key in `.sops.yaml`, and your own encrypted `secrets-values.yaml`. See the [deployment guide](documentation/deployment_guide.md).
 
-See [documentation/deployment_guide.md](documentation/deployment_guide.md) for the deployment steps.
-
 ## Verification after deployment
 
 ```

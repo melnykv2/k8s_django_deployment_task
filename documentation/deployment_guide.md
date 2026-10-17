@@ -5,7 +5,6 @@
 ```bash
 brew install awscli eksctl kubectl helm helmfile sops age gnupg
 
-# helm-secrets (Helm 4: three signed plugins)
 mkdir -p ~/.config/helm
 curl -sL https://github.com/jkroepke.gpg | gpg --dearmor > ~/.config/helm/jkroepke.gpg
 K=~/.config/helm/jkroepke.gpg; V=4.7.9
@@ -13,7 +12,7 @@ helm plugin install --keyring $K https://github.com/jkroepke/helm-secrets/releas
 helm plugin install --keyring $K https://github.com/jkroepke/helm-secrets/releases/download/v$V/secrets-getter-$V.tgz
 helm plugin install --keyring $K https://github.com/jkroepke/helm-secrets/releases/download/v$V/secrets-post-renderer-$V.tgz
 
-# helm-diff
+# install helm-diff
 helmfile init
 ```
 
@@ -137,5 +136,5 @@ aws rds delete-db-instance --db-instance-identifier healthchecks-db \
 aws rds delete-db-subnet-group --db-subnet-group-name healthchecks-db
 aws ec2 delete-security-group --group-id <rds-security-group-id>
 
-eksctl delete cluster -f infra/eks-cluster.yaml --wait
+eksctl delete cluster -f infra/eks-cluster.yaml
 ```

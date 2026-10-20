@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-static-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: {{ .Values.storage.className }}
+  volumeName: {{ .Release.Name }}-static-pv
+  resources:
+    requests:
+      storage: {{ .Values.storage.size }}

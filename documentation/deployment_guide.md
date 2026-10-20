@@ -191,14 +191,6 @@ kubectl exec deploy/healthchecks -- sh -c "mount | grep static-collected"   # ty
 curl -I https://hc.<your-domain>/static/img/favicon.svg    # HTTP 200
 ```
 
-Troubleshooting:
-
-| Symptom | Cause |
-|---|---|
-| PVC `Pending` | PV/PVC name, `storageClassName` or access mode mismatch (`kubectl describe pvc`) |
-| Pod stuck in `ContainerCreating`, `mount.nfs: Connection timed out` | EFS security group or missing mount target in the node's AZ |
-| `copy-static` fails with `Permission denied` | Access point missing from the PV `volumeHandle` |
-
 ## 10. Clean up
 
 ```bash

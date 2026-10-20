@@ -48,4 +48,4 @@ storage:
   className: efs-sc
   size: 1Gi
   efsFileSystemId: fs-CHANGEME
-  staticPath: /opt/healthchecks/static-collected
+  staticPath: /app/static-collected

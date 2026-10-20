@@ -99,55 +99,7 @@ healthchecks   Deployment/healthchecks   cpu: 221%/80%, memory: 32%/80%   2     
 
 ## Persistent storage
 
-### The problem
-
-A container's filesystem is temporary. When a pod restarts, is rescheduled, or is replaced during a rollout or an HPA scale-down, everything it wrote is lost. Kubernetes solves this by keeping storage separate from pods, using three objects.
-
-### PersistentVolume (PV)
-
-A PV represents a real piece of storage, such as an AWS EBS disk, an EFS filesystem or an NFS share. It is a cluster-wide object, not namespaced, and it exists independently of any pod. It describes:
-
-- **capacity**, for example `1Gi`
-- **access modes**:
-  - `ReadWriteOnce` (RWO): read-write from a single node (EBS)
-  - `ReadOnlyMany` (ROX): read-only from many nodes
-  - `ReadWriteMany` (RWX): read-write from many nodes (EFS, NFS)
-  - `ReadWriteOncePod`: a single pod only
-- **reclaim policy**: what happens to the data after the claim is deleted. `Retain` keeps it, and `Delete` destroys the backing storage.
-- **backend**: the driver and the identifier of the real storage, e.g. `csi.driver: efs.csi.aws.com` and `volumeHandle`.
-
-### PersistentVolumeClaim (PVC)
-
-A PVC is an application's **request** for storage, for example "1Gi, ReadWriteMany, class `efs-sc`". It is namespaced and is part of the application's chart. Pods never reference a PV directly. They mount a PVC, and Kubernetes **binds** each PVC to exactly one matching PV. A matching PV has the same storage class, compatible access modes and enough capacity. Once bound, both show `STATUS: Bound`.
-
-This split separates responsibilities. The application declares *what* it needs, and the cluster decides *where* it comes from.
-
-### StorageClass
-
-A StorageClass describes a *type* of storage and who provides it:
-
-- `provisioner`: the CSI driver that talks to the storage system, e.g. `efs.csi.aws.com` or `ebs.csi.aws.com`
-- `parameters`: driver-specific settings, e.g. disk type or EFS mode
-- `reclaimPolicy` and `volumeBindingMode`: `Immediate`, or `WaitForFirstConsumer`, which waits until a pod is scheduled so that zonal disks are created in the right availability zone
-
-It has two jobs: it groups PVs and PVCs for matching by `storageClassName`, and it enables **dynamic provisioning**.
-
-### How they work together
-
-```
- Pod ──mounts──▶ PVC ──bound 1:1──▶ PV ──CSI driver──▶ real storage (EFS)
-                  │                  ▲
-                  └─ storageClassName ── StorageClass ── creates PVs automatically (dynamic only)
-```
-
-- **Static provisioning**: an administrator creates the storage and a PV that points to it. A PVC then binds to that existing PV. **This project uses static provisioning.**
-- **Dynamic provisioning**: only a PVC is written. The StorageClass's provisioner creates the storage and the PV automatically. Most production clusters work this way.
-
-Lifecycle: **provision → bind → use (pods mount the PVC) → release (PVC deleted) → reclaim (Retain / Delete)**.
-
 ### Implementation in this project
-
-**Why EFS and not EBS.** The application runs 2–4 replicas spread over 2 nodes in different availability zones, and all of them must read the same files. EBS volumes are `ReadWriteOnce` and zonal, so a second pod on another node would fail with a `Multi-Attach error`. EFS is `ReadWriteMany` and regional, so every pod on every node can mount it at the same time.
 
 | File | What it defines |
 |---|---|
@@ -157,29 +109,6 @@ Lifecycle: **provision → bind → use (pods mount the PVC) → release (PVC de
 | `deployment.yaml` | Pod volume `static` from the PVC, mounted by the `copy-static` initContainer and the app container |
 | `infra/eks-cluster.yaml` | OIDC and the `aws-efs-csi-driver` addon, so the nodes can mount EFS |
 
-EFS reports no real size limit, but Kubernetes requires `capacity` on a PV, so `1Gi` is only a placeholder.
-
-**EFS access point.** The image runs as uid 1000, while a new EFS filesystem's root directory is owned by root. The access point exposes `/healthchecks-static`, owned by uid/gid 1000, and performs every operation as uid 1000. Without it, writes fail with `Permission denied`.
-
-**How the static files get onto the volume.** The image build already runs `collectstatic` and `compress` in a builder stage and copies the result to `/app/static-collected` (`STATIC_ROOT`). WhiteNoise serves files from there. Mounting a volume on that path hides the image's files, so the `copy-static` initContainer mounts the same volume on `/mnt/static` and copies the built files into it before the app starts:
-
-```
-initContainer migrate      → database migrations
-initContainer copy-static  → /app/static-collected (image) ──cp──▶ /mnt/static (EFS)
-container healthchecks     → /app/static-collected = EFS volume → served by WhiteNoise
-```
-
-Running `collectstatic` in the pod is not possible because the final image does not contain the source `static/` directory. It is also unnecessary, because the build has already produced the files.
-
-### Production considerations
-
-A shared volume works, but it is rarely the best choice for **static** files:
-
-- **Rolling updates mix versions.** Old and new pods share one directory, and the new pods overwrite files, including django-compressor's manifest, that the old pods are still serving.
-- **Extra dependency.** If EFS is slow or unavailable, every pod is affected, even though the files are already inside the image.
-- **Slower reads.** Network storage is slower than files in the image.
-
-In production I would keep static files in the image (WhiteNoise), or upload them to **S3 + CloudFront** in CI. PersistentVolumes are a better fit for data the application *creates at runtime*, such as user uploads (`MEDIA_ROOT`), generated reports, or databases running as StatefulSets with one RWO volume per replica.
 
 ### Storage verification
 

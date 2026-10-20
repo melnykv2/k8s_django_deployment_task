@@ -47,5 +47,6 @@ letsencrypt:
 storage:
   className: efs-sc
   size: 1Gi
-  efsFileSystemId: fs-CHANGEME
+  efsFileSystemId: fs-0cc86d4f443ff2550
+  efsAccessPointId: fsap-0fe313921b7059620
   staticPath: /app/static-collected

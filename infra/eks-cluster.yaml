@@ -16,3 +16,10 @@ managedNodeGroups:
     minSize: 2
     maxSize: 2
     privateNetworking: false
+
+iam:
+  withOIDC: true
+addons:
+  - name: aws-efs-csi-driver
+    wellKnownPolicies:
+      efsCSIController: true

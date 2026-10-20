@@ -11,4 +11,4 @@ spec:
   storageClassName: {{ .Values.storage.className }}
   csi:
     driver: efs.csi.aws.com
-    volumeHandle: {{ .Values.storage.efsFileSystemId }}
+    volumeHandle: {{ .Values.storage.efsFileSystemId }}::{{ .Values.storage.efsAccessPointId }}

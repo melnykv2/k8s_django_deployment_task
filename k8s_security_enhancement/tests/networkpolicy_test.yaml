@@ -1,0 +1,39 @@
+suite: network policies
+templates:
+  - templates/networkpolicy.yaml
+tests:
+  - it: renders four policies
+    asserts:
+      - hasDocuments:
+          count: 4
+
+  - it: denies everything by default
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.podSelector
+          value: {}
+
+  - it: lets the app receive traffic only on 8080
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 8080
+
+  - it: blocks the AWS metadata service
+    documentIndex: 1
+    asserts:
+      - contains:
+          path: spec.egress[2].to[0].ipBlock.except
+          content: 169.254.0.0/16
+
+  - it: allows the Let's Encrypt solver on 8089
+    documentIndex: 2
+    asserts:
+      - equal:
+          path: metadata.name
+          value: acme-http01-solver
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 8089

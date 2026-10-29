@@ -1,0 +1,29 @@
+suite: RBAC
+templates:
+  - templates/rbac.yaml
+tests:
+  - it: viewers cannot read Secrets
+    documentIndex: 0
+    asserts:
+      - notContains:
+          path: rules[0].resources
+          content: secrets
+
+  - it: developers cannot read Secrets or exec
+    documentIndex: 1
+    asserts:
+      - notContains:
+          path: rules[0].resources
+          content: secrets
+      - notContains:
+          path: rules[0].resources
+          content: pods/exec
+
+  - it: admins are limited to the namespace
+    documentIndex: 4
+    asserts:
+      - isKind:
+          of: RoleBinding
+      - equal:
+          path: roleRef.name
+          value: admin

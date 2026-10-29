@@ -1,3 +1,2 @@
 *.dec
 .helm_ls_cache/
-*_test.yaml

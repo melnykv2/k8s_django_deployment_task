@@ -93,3 +93,33 @@ addons:
 - **No Secrets** for viewers and developers: the DB password and Django key stay with admins.
 - **No pod-template editing** for developers: whoever can change the pod spec can mount any Secret and print it.
 - **Groups, not users:** people are mapped to groups through EKS access entries (IAM role → Kubernetes group), so access changes happen in IAM, not in the chart.
+
+## 5. Tests for the Helm templates
+
+**Connection test** (`templates/tests/test-connection.yaml`, run with `helm test`): after deployment, a hardened busybox pod calls `/api/v3/status/` through the Service. It has its own NetworkPolicy (`helm-test`), so it also proves the policies allow the required traffic.
+
+**Unit tests** (`k8s_security_enhancement/tests/*_test.yaml`, [helm-unittest](https://github.com/helm-unittest/helm-unittest)) render the templates without a cluster and check the security settings, so removing or breaking one fails the tests:
+
+| Suite | Checks |
+|---|---|
+| `deployment_test.yaml` | namespace, non-root, seccomp, no privilege escalation, read-only filesystem, capabilities dropped (app and initContainer), no API token |
+| `networkpolicy_test.yaml` | 4 policies, default deny, ingress only on 8080, metadata service blocked, ACME solver allowed |
+| `rbac_test.yaml` | no Secrets for viewers and developers, no exec for developers, admins limited to the namespace |
+
+```
+vadymmelnyk@Macbook k8s_django_deployment_task % helm unittest k8s_security_enhancement
+
+### Chart [ django-app ] k8s_security_enhancement
+
+ PASS  deployment security    k8s_security_enhancement/tests/deployment_test.yaml
+ PASS  network policies    k8s_security_enhancement/tests/networkpolicy_test.yaml
+ PASS  RBAC    k8s_security_enhancement/tests/rbac_test.yaml
+
+Charts:      1 passed, 1 total
+Test Suites: 3 passed, 3 total
+Tests:       13 passed, 13 total
+Snapshot:    0 passed, 0 total
+Time:        33.587125ms
+```
+
+`helm lint` alone is not enough: during this task a missing `---` merged two NetworkPolicies into one document. Lint passed, but the ACME policy silently disappeared. The "renders four policies" test catches exactly this.

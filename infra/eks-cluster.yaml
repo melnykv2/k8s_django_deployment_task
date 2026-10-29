@@ -20,6 +20,11 @@ addons:
   - name: kube-proxy
   - name: metrics-server
 
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["audit", "authenticator"]
+    logRetentionInDays: 30
+
 managedNodeGroups:
   - name: default
     instanceType: t3.small

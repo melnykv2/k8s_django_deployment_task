@@ -93,6 +93,7 @@ Open http://localhost:5601, log in as `elastic`, and create a data view for `k8s
 | Filebeat `CrashLoopBackOff`: `open filebeat.yml: permission denied` | The chart mounts the config with mode `0600`, owned by root; Filebeat ran as uid 1000 | Filebeat runs as root (chart default), with all capabilities dropped, no privilege escalation, seccomp; allowed by `baseline`, flagged by the `restricted` warning |
 | ~5% of events rejected: `Limit of total fields [1000] has been exceeded` | Elasticsearch created a field for every key in `requestObject` / `responseObject` (every resource type has different fields) | Index template: bodies stored but not indexed (`enabled: false`), annotations `flattened`, key fields `keyword`, `source_ip` as `ip`. Fields dropped from 1000+ to 128, index green |
 | Thousands of false positives | See section 4 (tuning) | Rules tuned |
+| `helmfile destroy` hung on Kibana: `post-delete-kibana-kibana` job `ETIMEDOUT` to port 9200 | The Elasticsearch NetworkPolicy allowed Kibana's pre-install job but not its post-delete cleanup job | Added `job-name: post-delete-kibana-kibana` to the NetworkPolicy rules |
 
 ## 4. Parsing and detection
 

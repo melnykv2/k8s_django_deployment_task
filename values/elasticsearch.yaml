@@ -55,6 +55,9 @@ networkPolicy:
       - podSelector:
           matchLabels:
             job-name: pre-install-kibana-kibana
+      - podSelector:
+          matchLabels:
+            job-name: post-delete-kibana-kibana
 
 nodeSelector:
   role: logging

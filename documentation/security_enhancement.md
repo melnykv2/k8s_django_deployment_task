@@ -27,3 +27,35 @@
 - the image runs as a non-root user (`USER 1000`)
 - RDS is not publicly accessible, and the app connects over SSL
 - resource requests and limits are set
+
+## 2. Pod-level hardening
+
+### 2.1 securityContext (threat #1)
+
+Set in `values.yaml` (`podSecurityContext`, `containerSecurityContext`) and applied in `deployment.yaml` to the app container **and** the `migrate` initContainer:
+
+| Setting | Why |
+|---|---|
+| `runAsNonRoot: true`, `runAsUser: 1000` | The container can never start as root |
+| `allowPrivilegeEscalation: false` | A process cannot gain more rights (e.g. via setuid binaries) |
+| `capabilities: drop: ["ALL"]` | No Linux capabilities: much less kernel attack surface |
+| `readOnlyRootFilesystem: true` | An attacker cannot drop tools or change code; `/tmp` is a small `emptyDir` |
+| `seccompProfile: RuntimeDefault` | Dangerous system calls are blocked |
+
+### 2.2 Namespaces and Pod Security Admission (threat #2)
+
+`securityContext` protects our pods. Pod Security Admission makes the API server **reject any unsafe pod** in a namespace, whoever creates it. It is enabled with namespace labels:
+
+| Namespace | Created by | Pod Security | Why |
+|---|---|---|---|
+| `healthchecks` (app) | `templates/ns.yaml` | `restricted` | Strictest level; the app complies |
+| `cert-manager` | `templates/ns.yaml` | `restricted` | cert-manager v1.13 complies |
+| `ingress-nginx` (release namespace) | helmfile `presync` hook | `baseline` (audit `restricted`) | The 4.8.1 controller needs privilege escalation to bind ports 80/443 |
+
+The Helm release lives in `ingress-nginx` because the ingress-nginx 4.8.1 subchart can only be installed into the release namespace. cert-manager is moved with its `namespace` value. Nothing runs in `default`.
+
+The ingress-nginx admission webhook is disabled (`controller.admissionWebhooks.enabled: false`), the published workaround for CVE-2025-1974 (threat #7).
+
+### 2.3 ServiceAccount without an API token (threat #3)
+
+`templates/serviceaccount.yaml` creates a dedicated `healthchecks` ServiceAccount with `automountServiceAccountToken: false`. The pod uses it and repeats the setting. The app never calls the Kubernetes API, so a compromised pod has no token to explore the cluster with.

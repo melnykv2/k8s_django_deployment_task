@@ -7,6 +7,9 @@ secrets: {}
 replicaCount: 2
 namespace:
   name: healthchecks
+serviceAccount:
+  name: healthchecks
+  automountServiceAccountToken: false
 image:
   repository: melnykv2/healthchecks
   tag: v1.4

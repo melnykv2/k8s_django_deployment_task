@@ -10,3 +10,17 @@ keywords:
   - web
 maintainers:
   - name: Vadym Melnyk
+
+dependencies:
+  - name: ingress-nginx
+    version: 4.8.1
+    repository: https://kubernetes.github.io/ingress-nginx
+    condition: ingress-nginx.enabled
+  - name: cert-manager
+    version: v1.13.1
+    repository: https://charts.jetstack.io
+    condition: cert-manager.enabled
+  - name: metrics-server
+    version: 3.11.0
+    repository: https://kubernetes-sigs.github.io/metrics-server/
+    condition: metrics-server.enabled

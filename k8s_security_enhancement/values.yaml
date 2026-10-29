@@ -57,6 +57,11 @@ letsencrypt:
 networkPolicy:
   databaseCidr: 192.168.0.0/16
 
+rbac:
+  viewerGroup: healthchecks:viewers
+  developerGroup: healthchecks:developers
+  adminGroup: healthchecks:admins
+
 ingress-nginx:
   enabled: true
   controller:

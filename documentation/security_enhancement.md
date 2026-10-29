@@ -79,3 +79,17 @@ addons:
   - name: vpc-cni
     configurationValues: '{"enableNetworkPolicy": "true"}'
 ```
+
+## 4. RBAC for users (threats #5, #6)
+
+`templates/rbac.yaml` (added to the given structure) gives three groups access to the `healthchecks` namespace only:
+
+| Group | Binding | Can | Cannot |
+|---|---|---|---|
+| `healthchecks:viewers` | Role `viewer` | read pods, logs, deployments, services, ingresses, network policies | read Secrets, change anything |
+| `healthchecks:developers` | Role `developer` | viewer + delete (restart) pods, scale the Deployment | read Secrets, `exec`, edit the pod template |
+| `healthchecks:admins` | ClusterRole `admin` via a **Role**Binding | everything in the namespace | anything outside it |
+
+- **No Secrets** for viewers and developers: the DB password and Django key stay with admins.
+- **No pod-template editing** for developers: whoever can change the pod spec can mount any Secret and print it.
+- **Groups, not users:** people are mapped to groups through EKS access entries (IAM role → Kubernetes group), so access changes happen in IAM, not in the chart.

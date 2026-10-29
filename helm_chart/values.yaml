@@ -45,6 +45,7 @@ letsencrypt:
   email: "info@vadymthebest.com"
 
 storage:
+  enabled: true
   className: efs-sc
   size: 1Gi
   efsFileSystemId: fs-0cc86d4f443ff2550

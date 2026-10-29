@@ -1,12 +1,18 @@
 helmDefaults:
   wait: true
 
+repositories:
+  - name: elastic
+    url: https://helm.elastic.co
+
 releases:
   - name: healthchecks
     namespace: ingress-nginx
     createNamespace: false
     chart: ./k8s_security_enhancement
     skipDeps: true
+    labels:
+      tier: app
     values:
       - ./helm_secrets/django_config.yaml
     secrets:
@@ -23,3 +29,63 @@ releases:
             pod-security.kubernetes.io/enforce=baseline
             pod-security.kubernetes.io/warn=baseline
             pod-security.kubernetes.io/audit=restricted
+
+  - name: elasticsearch
+    namespace: logging
+    createNamespace: false
+    chart: elastic/elasticsearch
+    version: 8.5.1
+    labels:
+      tier: logging
+    values:
+      - ./values/elasticsearch.yaml
+    secrets:
+      - ./helm_secrets/elastic_secret.yaml
+    hooks:
+      - events: ["presync"]
+        showlogs: true
+        command: sh
+        args:
+          - -c
+          - >-
+            kubectl create namespace logging --dry-run=client -o yaml | kubectl apply -f - &&
+            kubectl label namespace logging --overwrite
+            pod-security.kubernetes.io/enforce=baseline
+            pod-security.kubernetes.io/warn=restricted
+            pod-security.kubernetes.io/audit=restricted
+
+  - name: kibana
+    namespace: logging
+    createNamespace: false
+    chart: elastic/kibana
+    version: 8.5.1
+    labels:
+      tier: logging
+    needs:
+      - logging/elasticsearch
+    values:
+      - ./values/kibana.yaml
+
+  - name: logstash
+    namespace: logging
+    createNamespace: false
+    chart: elastic/logstash
+    version: 8.5.1
+    labels:
+      tier: logging
+    needs:
+      - logging/elasticsearch
+    values:
+      - ./values/logstash-config.yaml
+
+  - name: filebeat
+    namespace: logging
+    createNamespace: false
+    chart: elastic/filebeat
+    version: 8.5.1
+    labels:
+      tier: logging
+    needs:
+      - logging/logstash
+    values:
+      - ./values/filebeat.yaml

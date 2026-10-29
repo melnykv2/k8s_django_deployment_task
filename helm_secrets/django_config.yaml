@@ -1,0 +1,10 @@
+config:
+  DB: "postgres"
+  DB_HOST: "healthchecks-db.cwv2a4uw41qv.us-east-1.rds.amazonaws.com"
+  DB_PORT: "5432"
+  DB_NAME: "hc"
+  DB_USER: "hc"
+  DB_SSLMODE: "require"
+  DEBUG: "False"
+  SITE_ROOT: "https://hc.vadymthebest.com"
+  ALLOWED_HOSTS: "hc.vadymthebest.com,localhost"

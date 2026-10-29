@@ -1,36 +1,8 @@
 # Kubernetes Security Enhancement
 
-## 1. Threat assessment
+## 1. Pod-level hardening
 
-**Scope:**
-- the Helm chart (`k8s_security_enhancement/`)
-- the vendored subcharts
-- `helmfile.yaml`
-- the EKS cluster definition (`infra/eks-cluster.yaml`)
-
-**Scenario:** an attacker finds a bug in Django and can run commands inside an application pod. How far can they get?
-
-| # | Threat | Where (evidence) | Severity | Mitigation | Step |
-|---|---|---|---|---|---|
-| 1 | A compromised container can gain privileges, use Linux capabilities and write to its filesystem | `deployment.yaml` has no `securityContext` | High | `securityContext`: non-root, no privilege escalation, read-only filesystem, drop all capabilities, seccomp | 2 |
-| 2 | Anyone who can create pods can start a privileged pod and take over the node | App runs in `default`, no Pod Security Admission | High | Dedicated namespace with Pod Security `restricted` | 2 |
-| 3 | Every pod gets a Kubernetes API token it never uses | No `automountServiceAccountToken: false` | Medium | Dedicated ServiceAccount without a token | 2 |
-| 4 | Any pod can reach any other pod and the AWS metadata service (node IAM credentials) | No NetworkPolicy | High | Default deny + allow only ingress-nginx → app, app → DNS and database | 3 |
-| 5 | One identity is admin of everything; no limited access is possible | Only the cluster creator has access | High | RBAC roles: viewer, developer, namespace admin | 4 |
-| 6 | Anyone allowed to read Secrets sees the DB password (base64 is not encryption) | `secret.yaml` | Medium | RBAC: viewers and developers cannot read Secrets | 4 |
-| 7 | ingress-nginx 4.8.1 is vulnerable to CVE-2025-1974 "IngressNightmare" (read all cluster Secrets); the project no longer receives fixes since March 2026. cert-manager v1.13 is end of life | `charts/ingress-nginx-4.8.1.tgz`, `charts/cert-manager-v1.13.1.tgz` | High | Disable the ingress-nginx admission webhook now; upgrade the components | 2 + proposal |
-| 8 | Long-lived AWS access keys stored in plain text on the workstation | `~/.zshrc` | High | Rotate keys, use AWS SSO with short-lived credentials | Proposal |
-
-**Already good:**
-- secrets encrypted in Git with sops + age
-- HTTPS with Let's Encrypt
-- the image runs as a non-root user (`USER 1000`)
-- RDS is not publicly accessible, and the app connects over SSL
-- resource requests and limits are set
-
-## 2. Pod-level hardening
-
-### 2.1 securityContext (threat #1)
+### 1.1 securityContext
 
 Set in `values.yaml` (`podSecurityContext`, `containerSecurityContext`) and applied in `deployment.yaml` to the app container **and** the `migrate` initContainer:
 
@@ -42,7 +14,7 @@ Set in `values.yaml` (`podSecurityContext`, `containerSecurityContext`) and appl
 | `readOnlyRootFilesystem: true` | An attacker cannot drop tools or change code; `/tmp` is a small `emptyDir` |
 | `seccompProfile: RuntimeDefault` | Dangerous system calls are blocked |
 
-### 2.2 Namespaces and Pod Security Admission (threat #2)
+### 1.2 Namespaces and Pod Security Admission
 
 `securityContext` protects our pods. Pod Security Admission makes the API server **reject any unsafe pod** in a namespace, whoever creates it. It is enabled with namespace labels:
 
@@ -56,11 +28,11 @@ The Helm release lives in `ingress-nginx` because the ingress-nginx 4.8.1 subcha
 
 The ingress-nginx admission webhook is disabled (`controller.admissionWebhooks.enabled: false`), the published workaround for CVE-2025-1974 (threat #7).
 
-### 2.3 ServiceAccount without an API token (threat #3)
+### 1.3 ServiceAccount without an API token
 
 `templates/serviceaccount.yaml` creates a dedicated `healthchecks` ServiceAccount with `automountServiceAccountToken: false`. The pod uses it and repeats the setting. The app never calls the Kubernetes API, so a compromised pod has no token to explore the cluster with.
 
-## 3. Network policies (threat #4)
+## 2. Network policies
 
 By default every pod can reach every pod and the internet. `templates/networkpolicy.yaml` (added to the given structure) creates three policies in `healthchecks`:
 
@@ -80,7 +52,7 @@ addons:
     configurationValues: '{"enableNetworkPolicy": "true"}'
 ```
 
-## 4. RBAC for users (threats #5, #6)
+## 3. RBAC for users
 
 `templates/rbac.yaml` (added to the given structure) gives three groups access to the `healthchecks` namespace only:
 
@@ -94,7 +66,7 @@ addons:
 - **No pod-template editing** for developers: whoever can change the pod spec can mount any Secret and print it.
 - **Groups, not users:** people are mapped to groups through EKS access entries (IAM role → Kubernetes group), so access changes happen in IAM, not in the chart.
 
-## 5. Tests for the Helm templates
+## 4. Tests for the Helm templates
 
 **Connection test** (`templates/tests/test-connection.yaml`, run with `helm test`): after deployment, a hardened busybox pod calls `/api/v3/status/` through the Service. It has its own NetworkPolicy (`helm-test`), so it also proves the policies allow the required traffic.
 
@@ -122,8 +94,8 @@ Snapshot:    0 passed, 0 total
 Time:        33.587125ms
 ```
 
-## 6. Repository structure
-
+## 5. Repository structure
+ 
 ```
 ├── k8s_security_enhancement
 │   ├── charts/

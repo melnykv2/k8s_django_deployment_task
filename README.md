@@ -123,6 +123,30 @@ audit.user.username : *healthchecks-developer*
 
 **Trigger.** The daily review shows 8 flagged events at 02:47–02:51 UTC from `assumed-role/healthchecks-developer/jane`. Jane doesn't work at night.
 
+**How it was logged.** One of the events, as stored in Elasticsearch after the Logstash pipeline (shortened):
+
+```json
+{
+  "@timestamp": "2026-10-24T02:47:30.412Z",
+  "source_ip": "198.51.100.77",
+  "user_type": "human",
+  "suspicious": true,
+  "suspicious_reasons": ["access-denied", "secret-read"],
+  "audit": {
+    "verb": "list",
+    "user": {
+      "username": "arn:aws:sts::111122223333:assumed-role/healthchecks-developer/jane",
+      "groups": ["healthchecks:developers", "system:authenticated"]
+    },
+    "objectRef": { "resource": "secrets", "namespace": "healthchecks" },
+    "userAgent": "kubectl/v1.34.1 (linux/amd64)",
+    "responseStatus": { "code": 403, "reason": "Forbidden" }
+  }
+}
+```
+
+The API server recorded the request; Logstash added `source_ip`, `user_type` and two detection reasons. That is why it appeared under `suspicious : true`.
+
 **Step 1: everything this identity did.** Query `audit.user.username : *healthchecks-developer/jane*`:
 
 | Time | source_ip | Action | Code |

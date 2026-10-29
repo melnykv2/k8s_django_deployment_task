@@ -59,3 +59,23 @@ The ingress-nginx admission webhook is disabled (`controller.admissionWebhooks.e
 ### 2.3 ServiceAccount without an API token (threat #3)
 
 `templates/serviceaccount.yaml` creates a dedicated `healthchecks` ServiceAccount with `automountServiceAccountToken: false`. The pod uses it and repeats the setting. The app never calls the Kubernetes API, so a compromised pod has no token to explore the cluster with.
+
+## 3. Network policies (threat #4)
+
+By default every pod can reach every pod and the internet. `templates/networkpolicy.yaml` (added to the given structure) creates three policies in `healthchecks`:
+
+| Policy | Pods | Allowed |
+|---|---|---|
+| `default-deny-all` | all | nothing |
+| app | `app: <release>` | **in:** TCP 8080 from `ingress-nginx` · **out:** DNS to CoreDNS, TCP 5432 to the VPC (RDS), TCP 443 to the internet **except** private ranges and `169.254.0.0/16` |
+| `acme-http01-solver` | cert-manager solver pods | **in:** TCP 8089 from `ingress-nginx` (Let's Encrypt validation) |
+
+Blocking `169.254.0.0/16` stops a compromised pod from reading the node's AWS credentials from the EC2 metadata service.
+
+EKS ignores NetworkPolicies unless the VPC CNI enforces them, so `infra/eks-cluster.yaml` enables it:
+
+```yaml
+addons:
+  - name: vpc-cni
+    configurationValues: '{"enableNetworkPolicy": "true"}'
+```

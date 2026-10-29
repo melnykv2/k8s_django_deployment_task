@@ -54,6 +54,9 @@ autoscaling:
 letsencrypt:
   email: "info@vadymthebest.com"
 
+networkPolicy:
+  databaseCidr: 192.168.0.0/16
+
 ingress-nginx:
   enabled: true
   controller:

@@ -9,6 +9,17 @@ vpc:
   nat:
     gateway: Disable
 
+iam:
+  withOIDC: true
+addons:
+  - name: vpc-cni
+    attachPolicyARNs:
+      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+    configurationValues: '{"enableNetworkPolicy": "true"}'
+  - name: coredns
+  - name: kube-proxy
+  - name: metrics-server
+
 managedNodeGroups:
   - name: default
     instanceType: t3.small

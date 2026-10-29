@@ -11,6 +11,20 @@ vpc:
 
 iam:
   withOIDC: true
+  serviceAccounts:
+    - metadata:
+        name: filebeat
+        namespace: logging
+      attachPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: ["logs:DescribeLogGroups"]
+            Resource: "*"
+          - Effect: Allow
+            Action: ["logs:DescribeLogStreams", "logs:FilterLogEvents", "logs:GetLogEvents"]
+            Resource: "arn:aws:logs:us-east-1:*:log-group:/aws/eks/healthchecks/cluster:*"
+
 addons:
   - name: vpc-cni
     attachPolicyARNs:
@@ -19,6 +33,10 @@ addons:
   - name: coredns
   - name: kube-proxy
   - name: metrics-server
+  - name: aws-ebs-csi-driver
+    wellKnownPolicies:
+      ebsCSIController: true
+    configurationValues: '{"defaultStorageClass": {"enabled": true}}'
 
 cloudWatch:
   clusterLogging:
@@ -32,3 +50,15 @@ managedNodeGroups:
     minSize: 2
     maxSize: 2
     privateNetworking: false
+  - name: logging
+    instanceType: t3.large
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 1
+    privateNetworking: false
+    labels:
+      role: logging
+    taints:
+      - key: dedicated
+        value: logging
+        effect: NoSchedule

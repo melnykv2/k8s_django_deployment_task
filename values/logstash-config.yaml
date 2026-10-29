@@ -1,0 +1,151 @@
+replicas: 1
+
+logstashJavaOpts: "-Xms512m -Xmx512m"
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+labels:
+  elasticsearch-master-http-client: "true"
+
+extraEnvs:
+  - name: ELASTICSEARCH_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: elasticsearch-master-credentials
+        key: username
+  - name: ELASTICSEARCH_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: elasticsearch-master-credentials
+        key: password
+secretMounts:
+  - name: elasticsearch-master-certs
+    secretName: elasticsearch-master-certs
+    path: /usr/share/logstash/certs
+
+service:
+  type: ClusterIP
+  ports:
+    - name: beats
+      port: 5044
+      protocol: TCP
+      targetPort: 5044
+
+logstashConfig:
+  logstash.yml: |
+    http.host: 0.0.0.0
+    xpack.monitoring.enabled: false
+
+logstashPipeline:
+  logstash.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+    }
+
+    filter {
+      json {
+        source => "message"
+        target => "audit"
+        remove_field => ["message"]
+      }
+
+      if [audit][objectRef][resource] == "leases" and [audit][user][username] =~ /^(system:|eks:)/ {
+        drop {}
+      }
+
+      date {
+        match => ["[audit][requestReceivedTimestamp]", "ISO8601"]
+        target => "@timestamp"
+      }
+
+      if [audit][sourceIPs][0] {
+        mutate { add_field => { "source_ip" => "%{[audit][sourceIPs][0]}" } }
+      }
+
+      if [audit][user][username] =~ /^system:serviceaccount:/ {
+        mutate { add_field => { "user_type" => "serviceaccount" } }
+      } else if [audit][user][username] =~ /^(system:|eks:)/ {
+        mutate { add_field => { "user_type" => "system" } }
+      } else {
+        mutate { add_field => { "user_type" => "human" } }
+      }
+
+      # ---- Detection rules ----
+      if [audit][responseStatus][code] == 401 or [audit][responseStatus][code] == 403 {
+        mutate { add_field => { "suspicious_reasons" => "access-denied" } }
+      }
+      if [audit][objectRef][resource] == "secrets" and [audit][verb] in ["get", "list", "watch"] and [user_type] == "human" {
+        mutate { add_field => { "suspicious_reasons" => "secret-read" } }
+      }
+      if [audit][objectRef][subresource] in ["exec", "attach", "portforward"] {
+        mutate { add_field => { "suspicious_reasons" => "pod-exec" } }
+      }
+      if [audit][objectRef][apiGroup] == "rbac.authorization.k8s.io" and [audit][verb] in ["create", "update", "patch", "delete"] {
+        mutate { add_field => { "suspicious_reasons" => "rbac-change" } }
+      }
+      if [audit][verb] == "delete" and [audit][objectRef][resource] in ["networkpolicies", "namespaces"] {
+        mutate { add_field => { "suspicious_reasons" => "security-control-deleted" } }
+      }
+      if [audit][impersonatedUser][username] {
+        mutate { add_field => { "suspicious_reasons" => "impersonation" } }
+      }
+      if [audit][objectRef][resource] in ["selfsubjectrulesreviews", "selfsubjectaccessreviews"] and [user_type] == "human" {
+        mutate { add_field => { "suspicious_reasons" => "permission-discovery" } }
+      }
+      if [audit][user][username] == "system:anonymous" {
+        mutate { add_field => { "suspicious_reasons" => "anonymous-access" } }
+      }
+
+      if [suspicious_reasons] {
+        mutate { add_field => { "suspicious" => "true" } }
+      } else {
+        mutate { add_field => { "suspicious" => "false" } }
+      }
+      mutate { convert => { "suspicious" => "boolean" } }
+    }
+
+    output {
+      elasticsearch {
+        hosts => ["https://elasticsearch-master:9200"]
+        user => "${ELASTICSEARCH_USERNAME}"
+        password => "${ELASTICSEARCH_PASSWORD}"
+        ssl => true
+        cacert => "/usr/share/logstash/certs/ca.crt"
+        index => "k8s-audit-%{+YYYY.MM.dd}"
+        document_id => "%{[audit][auditID]}"
+        ilm_enabled => false
+        data_stream => false
+      }
+    }
+
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  runAsNonRoot: true
+  runAsUser: 1000
+
+antiAffinity: soft
+persistence:
+  enabled: false
+
+nodeSelector:
+  role: logging
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: logging
+    effect: NoSchedule

@@ -1,0 +1,50 @@
+daemonset:
+  enabled: false
+
+deployment:
+  enabled: true
+
+  filebeatConfig:
+    filebeat.yml: |
+      filebeat.inputs:
+        - type: aws-cloudwatch
+          region_name: us-east-1
+          log_group_name: /aws/eks/healthchecks/cluster
+          log_stream_prefix: kube-apiserver-audit
+          start_position: beginning
+          scan_frequency: 30s
+
+      output.logstash:
+        hosts: ["logstash-logstash:5044"]
+
+  extraEnvs: []
+  secretMounts: []
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  securityContext:
+    runAsUser: 1000
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    privileged: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
+  nodeSelector:
+    role: logging
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: logging
+      effect: NoSchedule
+
+managedServiceAccount: false
+serviceAccount: filebeat

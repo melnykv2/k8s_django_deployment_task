@@ -23,12 +23,14 @@ spec:
                 name: {{ .Release.Name }}-config
             - secretRef:
                 name: {{ .Release.Name }}-secret
+        {{- if .Values.storage.enabled }}
         - name: copy-static
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command: ["sh", "-c", "cp -a {{ .Values.storage.staticPath }}/. /mnt/static"]
           volumeMounts:
             - name: static
               mountPath: /mnt/static
+        {{- end }}
       containers:
         - name: healthchecks
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -58,10 +60,14 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 20
             failureThreshold: 3
+          {{- if .Values.storage.enabled }}
           volumeMounts:
             - name: static
               mountPath: {{ .Values.storage.staticPath }}
+          {{- end }}
+      {{- if .Values.storage.enabled }}
       volumes:
         - name: static
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-static-pvc
+      {{- end }}

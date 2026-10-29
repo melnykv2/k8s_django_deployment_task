@@ -3,10 +3,23 @@ helmDefaults:
 
 releases:
   - name: healthchecks
-    namespace: default
+    namespace: ingress-nginx
+    createNamespace: false
     chart: ./k8s_security_enhancement
     skipDeps: true
     values:
       - ./helm_secrets/django_config.yaml
     secrets:
       - ./helm_secrets/django_secret.yaml
+    hooks:
+      - events: ["presync"]
+        showlogs: true
+        command: sh
+        args:
+          - -c
+          - >-
+            kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f - &&
+            kubectl label namespace ingress-nginx --overwrite
+            pod-security.kubernetes.io/enforce=baseline
+            pod-security.kubernetes.io/warn=baseline
+            pod-security.kubernetes.io/audit=restricted

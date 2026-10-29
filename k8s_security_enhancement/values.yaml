@@ -5,6 +5,8 @@ config: {}
 secrets: {}
 
 replicaCount: 2
+namespace:
+  name: healthchecks
 image:
   repository: melnykv2/healthchecks
   tag: v1.4
@@ -55,9 +57,12 @@ ingress-nginx:
     service:
       annotations:
         service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    admissionWebhooks:
+      enabled: false
 
 cert-manager:
   enabled: true
+  namespace: cert-manager
   installCRDs: true
 
 metrics-server:

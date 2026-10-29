@@ -123,3 +123,64 @@ Time:        33.587125ms
 ```
 
 `helm lint` alone is not enough: during this task a missing `---` merged two NetworkPolicies into one document. Lint passed, but the ACME policy silently disappeared. The "renders four policies" test catches exactly this.
+
+## 6. Remaining risks and recommendations
+
+| Risk | Recommendation |
+|---|---|
+| ingress-nginx 4.8.1 and cert-manager v1.13.1 are unsupported (kept because the task specifies them) | Upgrade; move from the retired ingress-nginx to a maintained Gateway API controller |
+| Long-lived AWS keys on the workstation (threat #8) | Rotate them; use AWS SSO with short-lived credentials |
+| Kubernetes API endpoint open to the internet | Restrict `publicAccessCIDRs` or use a private endpoint |
+| The app uses the RDS master user | Create a database user with only the permissions the app needs |
+| Images referenced by tag | Pin images by digest and scan them (e.g. Trivy) |
+
+## 7. Repository structure
+
+```
+├── k8s_security_enhancement          # Helm chart (umbrella)
+│   ├── charts/                       # vendored subcharts: cert-manager, ingress-nginx, metrics-server
+│   ├── Chart.yaml                    # metadata + dependencies (on/off per subchart)
+│   ├── .helmignore
+│   ├── templates/
+│   │   ├── _helpers.tpl              # shared snippets (namespace)
+│   │   ├── ns.yaml                   # namespaces + Pod Security labels
+│   │   ├── serviceaccount.yaml       # ServiceAccount without API token
+│   │   ├── deployment.yaml           # securityContext, read-only filesystem
+│   │   ├── networkpolicy.yaml        # added (task 4)
+│   │   ├── rbac.yaml                 # added (task 5)
+│   │   ├── configmap.yaml, secret.yaml, service.yaml, ingress.yaml, hpa.yaml, issuer.yaml
+│   │   └── tests/test-connection.yaml  # helm test
+│   ├── tests/                        # added: helm-unittest suites (task 6)
+│   └── values.yaml                   # defaults, no environment data
+├── helmfile.yaml                     # one release deploys everything
+└── helm_secrets/
+    ├── django_config.yaml            # environment settings
+    ├── django_secret.yaml            # sops-encrypted secrets
+    └── .sops.yaml
+```
+
+### Why this structure works well
+
+1. **Separation of concerns.**
+   - The chart describes *what* is deployed and contains no environment data.
+   - `helm_secrets/` holds *where and with which settings*.
+   - `helmfile.yaml` describes *how* it is deployed.
+
+   The same chart can serve another environment with another pair of config and secret files.
+2. **Secrets stay out of the chart.** Only `django_secret.yaml` is encrypted, and `.sops.yaml` sits next to it, so the encryption rule and its files are reviewed together.
+3. **Vendored, pinned dependencies.** The `.tgz` files are exactly the code that was reviewed. Deployments download nothing, so they are reproducible and unaffected by a chart repository outage or compromise. Upgrades show up as changes in Git.
+4. **One file per resource type.** Network rules are in `networkpolicy.yaml`, access rules in `rbac.yaml`, and Git history shows when a security control changed.
+5. **Tests next to the code.** A change and its test land in the same commit.
+
+### My opinion
+
+The structure fits a single application with a small platform, as here. Its weak point is that **platform components live inside the application chart**:
+- upgrading the app can upgrade the ingress controller
+- uninstalling the app removes ingress and TLS for the whole cluster
+- it forced a workaround: the release lives in the `ingress-nginx` namespace because the 4.8.1 chart cannot be moved
+
+In a shared cluster I would deploy ingress-nginx and cert-manager as **separate helmfile releases** (still pinned) and keep the application chart application-only.
+
+**Differences from the given structure:**
+- `networkpolicy.yaml`, `rbac.yaml` and `tests/` were added, because tasks 4–6 require them
+- `NOTES.txt` (optional post-install message) is not included

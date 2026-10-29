@@ -29,8 +29,7 @@ deployment:
       memory: 256Mi
 
   securityContext:
-    runAsUser: 1000
-    runAsNonRoot: true
+    runAsUser: 0
     allowPrivilegeEscalation: false
     privileged: false
     capabilities:

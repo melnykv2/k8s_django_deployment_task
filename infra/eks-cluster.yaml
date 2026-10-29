@@ -51,7 +51,7 @@ managedNodeGroups:
     maxSize: 2
     privateNetworking: false
   - name: logging
-    instanceType: t3.large
+    instanceType: m7i-flex.large
     desiredCapacity: 1
     minSize: 1
     maxSize: 1

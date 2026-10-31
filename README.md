@@ -1,28 +1,4 @@
-# Kubernetes Audit Logging
-
-Kubernetes audit logs from the EKS API server are shipped to an ELK stack (Elasticsearch, Logstash, Kibana, Filebeat), where they are parsed, flagged by detection rules and analysed. The setup was deployed on EKS and tested with a simulated attack (section 5).
-
-Earlier work (deployment, security hardening) is in [documentation/](documentation/).
-
-## 1. Benefits of audit logs
-
-Every action in Kubernetes is an API request. The audit log records **who** did **what**, to **which object**, **when**, **from where**, and **whether it was allowed**.
-
-- **Detect attacks**: credential misuse, attempts to read Secrets or exec into pods. Blocked attempts are logged too, which gives early warning.
-- **Investigate incidents**: a reliable timeline of who changed what.
-- **Accountability**: every change is tied to an identity (IAM role → RBAC group).
-- **Compliance**: PCI DSS, SOC 2 and ISO 27001 require access logs.
-- **Verify security controls**: shows that RBAC and Pod Security Admission reject what they should.
-
-The audit policy sets how much each event contains:
-
-| Level | Contents |
-|---|---|
-| `Metadata` | user, verb, resource, source IP, response code |
-| `Request` | `Metadata` plus the request body |
-| `RequestResponse` | `Metadata` plus the request and response bodies |
-
-## 2. Architecture
+## 1. Architecture
 
 ```
 kube-apiserver (EKS) ──▶ CloudWatch Logs  /aws/eks/healthchecks/cluster  (kept 30 days)
@@ -35,9 +11,9 @@ kube-apiserver (EKS) ──▶ CloudWatch Logs  /aws/eks/healthchecks/cluster  (
 - **CloudWatch** keeps the original log outside the cluster, so it can't be changed even if the cluster is compromised.
 - **Filebeat** reads from CloudWatch, because on EKS the audit log is not a file on our nodes.
 
-## 3. Setup
+## 2. Setup
 
-### 3.1 Enable audit logging (`infra/eks-cluster.yaml`)
+### 2.1 Enable audit logging (`infra/eks-cluster.yaml`)
 
 On EKS, AWS runs the API server and applies its own audit policy, which records all requests and logs Secrets at `Metadata` level. The policy can't be changed; enabling the log type is enough:
 
@@ -50,7 +26,7 @@ cloudWatch:
 
 On a self-managed cluster (kubeadm, k3s) you would instead pass your own policy to the API server with `--audit-policy-file` and `--audit-log-path`.
 
-### 3.2 Cluster prerequisites (`infra/eks-cluster.yaml`)
+### 2.2 Cluster prerequisites (`infra/eks-cluster.yaml`)
 
 - node group `logging` (1 × **m7i-flex.large**, 8 GiB, tainted `dedicated=logging:NoSchedule`) for the ELK stack
 - `aws-ebs-csi-driver` add-on with a default StorageClass, for the Elasticsearch disk
